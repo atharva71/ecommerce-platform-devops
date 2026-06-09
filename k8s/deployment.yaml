@@ -1,20 +1,26 @@
 apiVersion: apps/v1
 kind: Deployment
+
 metadata:
-  name: nginx-app
+  name: backend-api
+
 spec:
-  replicas: 2
+  replicas: 1
+
   selector:
     matchLabels:
-      app: nginx-app
+      app: backend-api
+
   template:
     metadata:
       labels:
-        app: nginx-app
+        app: backend-api
+
     spec:
       containers:
-      - name: nginx
-        image: my-nginx
+      - name: backend-api
+        image: backend-api
         imagePullPolicy: Never
+
         ports:
-        - containerPort: 80
+        - containerPort: 3000
