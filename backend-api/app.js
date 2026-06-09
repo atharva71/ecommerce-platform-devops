@@ -1,11 +1,19 @@
 const express = require('express');
 const cors = require('cors');
 const redis = require('redis');
+const mysql = require('mysql2/promise');
 const app = express();
 app.use(cors());
 
 const client = redis.createClient({
     url: 'redis://redis-service:6379'
+});
+
+const db = mysql.createPool({
+    host: 'mysql-service',
+    user: 'root',
+    password: 'rootpassword',
+    database: 'ecommerce'
 });
 
 client.connect();
@@ -28,22 +36,21 @@ app.get('/health', (req, res) => {
 });
 
 
-app.get('/products', (req, res) => {
+app.get('/products', async (req, res) => {
 
-    const products = [
-        {
-            id: 1,
-            name: 'Laptop',
-            price: 50000
-        },
-        {
-            id: 2,
-            name: 'Phone',
-            price: 20000
-        }
-    ];
+    try {
 
-    res.send(products);
+        const [rows] =
+            await db.query('SELECT * FROM products');
+
+        res.send(rows);
+
+    } catch (err) {
+
+        console.log(err);
+
+        res.status(500).send('Database error');
+    }
 });
 
 app.post('/cart', async (req, res) => {
