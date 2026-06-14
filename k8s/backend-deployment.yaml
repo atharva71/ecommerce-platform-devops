@@ -24,3 +24,10 @@ spec:
 
         ports:
         - containerPort: 3000
+
+        readinessProbe:
+         httpGet:
+            path: /wrong-path
+            port: 3000
+         initialDelaySeconds: 5
+         periodSeconds: 10
