@@ -8,7 +8,7 @@ spec:
   type: NodePort
 
   selector:
-    app: backend-api-broken
+    app: backend-api
 
   ports:
     - port: 3000
