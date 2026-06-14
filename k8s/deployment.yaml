@@ -22,13 +22,13 @@ spec:
         image: backend-api
         imagePullPolicy: Never
         
-        resources:
-          requests:
-             memory: "32Mi"
-             cpu: "100m"
-          limits:
-             memory: "50Mi"
-             cpu: "200m"
+       resources:
+        requests:
+          memory: "32Mi"
+          cpu: "100m"
+        limits:
+          memory: "50Mi"
+          cpu: "200m"
 
         ports:
         - containerPort: 3000 
