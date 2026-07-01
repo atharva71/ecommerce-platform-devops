@@ -3,7 +3,9 @@ kind: Ingress
 
 metadata:
   name: ecommerce-ingress
+  namespace: ecommerce
 
+  # Strip /api prefix before forwarding request to backend
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /$2
 

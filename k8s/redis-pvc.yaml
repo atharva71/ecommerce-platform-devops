@@ -3,6 +3,7 @@ kind: PersistentVolumeClaim
 
 metadata:
   name: redis-pvc
+  namespace: ecommerce
 
 spec:
   accessModes:

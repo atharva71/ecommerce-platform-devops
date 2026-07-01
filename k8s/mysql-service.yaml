@@ -3,7 +3,7 @@ kind: Service
 
 metadata:
   name: mysql-service
-
+  namespace: ecommerce
 spec:
   selector:
     app: mysql
