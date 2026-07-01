@@ -2,28 +2,46 @@ pipeline {
 
     agent { label 'docker' }
 
+    environment {
+        AWS_REGION = 'ap-south-1'
+        ACCOUNT_ID = '051987441306'
+        IMAGE_NAME = 'backend-api'
+        IMAGE_TAG = "${BUILD_NUMBER}"
+    }
+
     stages {
 
         stage('Build Backend Image') {
             steps {
                 dir('backend-api') {
-                    sh 'docker build -t backend-api .'
+                    sh '''
+                    docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
+                    '''
                 }
             }
         }
 
-        stage('Load Backend Image Into KIND') {
+        stage('Login to Amazon ECR') {
             steps {
-                sh 'kind load docker-image backend-api'
+                sh '''
+                aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+                '''
             }
         }
 
-        stage('Deploy Backend') {
+        stage('Tag Image') {
             steps {
-                dir('backend-api') {
-                    sh 'kubectl apply -f deployment.yaml'
-                    sh 'kubectl apply -f service.yaml'
-                }
+                sh '''
+                docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${IMAGE_NAME}:${IMAGE_TAG}
+                '''
+            }
+        }
+
+        stage('Push Image') {
+            steps {
+                sh '''
+                docker push ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${IMAGE_NAME}:${IMAGE_TAG}
+                '''
             }
         }
     }

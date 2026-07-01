@@ -2,12 +2,39 @@ const express = require('express');
 const cors = require('cors');
 const redis = require('redis');
 const mysql = require('mysql2/promise');
+const promClient = require('prom-client');
+
 const app = express();
 app.use(cors());
 
-const client = redis.createClient({
+// --------------------
+// Prometheus Metrics
+// --------------------
+
+promClient.collectDefaultMetrics();
+
+const productsRequests = new promClient.Counter({
+    name: 'products_api_requests_total',
+    help: 'Total product API requests'
+});
+
+// --------------------
+// Redis
+// --------------------
+
+const redisClient = redis.createClient({
     url: 'redis://redis-service:6379'
 });
+
+redisClient.connect();
+
+redisClient.on('error', (err) => {
+    console.log('Redis Error:', err);
+});
+
+// --------------------
+// MySQL
+// --------------------
 
 const db = mysql.createPool({
     host: 'mysql-service',
@@ -16,14 +43,11 @@ const db = mysql.createPool({
     database: 'ecommerce'
 });
 
-client.connect();
-
-client.on('error', (err) => {
-    console.log('Redis Error:', err);
-});
-
 const PORT = 3000;
 
+// --------------------
+// Routes
+// --------------------
 
 app.get('/', (req, res) => {
     res.send('Backend API running 🚀');
@@ -35,13 +59,24 @@ app.get('/health', (req, res) => {
     });
 });
 
+// Prometheus Metrics Endpoint
+
+app.get('/metrics', async (req, res) => {
+    res.set('Content-Type', promClient.register.contentType);
+    res.end(await promClient.register.metrics());
+});
+
+// Products
 
 app.get('/products', async (req, res) => {
 
+    productsRequests.inc();
+
     try {
 
-        const [rows] =
-            await db.query('SELECT * FROM products');
+        const [rows] = await db.query(
+            'SELECT * FROM products'
+        );
 
         res.send(rows);
 
@@ -53,17 +88,22 @@ app.get('/products', async (req, res) => {
     }
 });
 
+// Cart Add
+
 app.post('/cart', async (req, res) => {
 
     const product = req.query.product;
 
-    let cart = await client.get('cart');
+    let cart = await redisClient.get('cart');
 
     cart = cart ? JSON.parse(cart) : [];
 
     cart.push(product);
 
-    await client.set('cart', JSON.stringify(cart));
+    await redisClient.set(
+        'cart',
+        JSON.stringify(cart)
+    );
 
     res.send({
         message: 'Product added to cart',
@@ -71,15 +111,29 @@ app.post('/cart', async (req, res) => {
     });
 });
 
+// Cart View
+
 app.get('/cart', async (req, res) => {
 
-    let cart = await client.get('cart');
+    let cart = await redisClient.get('cart');
 
     cart = cart ? JSON.parse(cart) : [];
 
     res.send(cart);
 });
 
+app.delete('/cart', async (req,res)=>{
+
+    await redisClient.del('cart');
+
+    res.json({
+        message:'Cart cleared'
+    });
+});
+
+// --------------------
+// Start Server
+// --------------------
 
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
