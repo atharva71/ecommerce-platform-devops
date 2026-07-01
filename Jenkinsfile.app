@@ -41,7 +41,17 @@ pipeline {
         }
     }
 }
-
+        stage('Login to Amazon ECR') {
+            steps {
+                sh """
+                aws ecr get-login-password --region ${AWS_REGION} | \
+                docker login \
+                --username AWS \
+                --password-stdin ${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com
+                """
+            }
+        }
+        
         stage('Build Backend Image') {
             steps {
                 dir('backend-api') {
@@ -62,17 +72,7 @@ pipeline {
             }
         }
 
-        stage('Login to Amazon ECR') {
-            steps {
-                sh """
-                aws ecr get-login-password --region ${AWS_REGION} | \
-                docker login \
-                --username AWS \
-                --password-stdin ${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com
-                """
-            }
-        }
-
+        
         stage('Tag Backend Image') {
             steps {
                 sh """
@@ -147,6 +147,7 @@ pipeline {
             }
         }
     }
+}
     post {
 
         success {
