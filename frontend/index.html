@@ -1,91 +1,247 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>DevOps Store</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>E-Commerce Platform</title>
+
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:Segoe UI,Tahoma,Geneva,Verdana,sans-serif;
+}
+
+body{
+    background:#f4f6f9;
+    color:#333;
+}
+
+header{
+    background:#1e293b;
+    color:white;
+    padding:20px;
+    text-align:center;
+    box-shadow:0 2px 8px rgba(0,0,0,.1);
+}
+
+.container{
+    max-width:1200px;
+    margin:auto;
+    padding:30px;
+}
+
+.grid{
+    display:grid;
+    grid-template-columns:2fr 1fr;
+    gap:25px;
+}
+
+.card{
+    background:white;
+    border-radius:12px;
+    padding:20px;
+    box-shadow:0 3px 10px rgba(0,0,0,.08);
+}
+
+.card h2{
+    margin-bottom:20px;
+    color:#1e293b;
+}
+
+.product-list{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(250px,1fr));
+    gap:20px;
+}
+
+.product{
+    border:1px solid #e2e8f0;
+    border-radius:10px;
+    padding:15px;
+    transition:.2s;
+}
+
+.product:hover{
+    transform:translateY(-3px);
+    box-shadow:0 4px 12px rgba(0,0,0,.08);
+}
+
+.product h3{
+    margin-bottom:10px;
+}
+
+.price{
+    color:#16a34a;
+    font-weight:bold;
+    margin-bottom:12px;
+}
+
+button{
+    background:#2563eb;
+    color:white;
+    border:none;
+    padding:10px 15px;
+    border-radius:6px;
+    cursor:pointer;
+}
+
+button:hover{
+    background:#1d4ed8;
+}
+
+.cart-item{
+    padding:10px;
+    border-bottom:1px solid #e5e7eb;
+}
+
+.clear-btn{
+    width:100%;
+    margin-top:15px;
+    background:#dc2626;
+}
+
+.clear-btn:hover{
+    background:#b91c1c;
+}
+
+.footer{
+    text-align:center;
+    margin-top:30px;
+    color:#666;
+}
+
+@media(max-width:768px){
+    .grid{
+        grid-template-columns:1fr;
+    }
+}
+</style>
 </head>
 
 <body>
 
-    <h1>Products 🚀</h1>
+<header>
+    <h1>🚀 Cloud Native E-Commerce Platform</h1>
+    <p>Kubernetes • ArgoCD • Prometheus • Grafana • MySQL • Redis</p>
+</header>
 
-    <ul id="products"></ul>
+<div class="container">
 
-    <h2>Cart 🛒</h2>
+    <div class="grid">
 
-    <ul id="cart"></ul>
+        <div class="card">
+            <h2>🛍 Products</h2>
 
-    <script>
+            <div id="products" class="product-list">
+                Loading products...
+            </div>
+        </div>
 
-        const API_URL = '/api';
+        <div class="card">
+            <h2>🛒 Cart</h2>
 
-        async function loadProducts() {
+            <div id="cart">
+                Loading cart...
+            </div>
 
-            const response = await fetch(`${API_URL}/products`);
+            <button class="clear-btn" onclick="clearCart()">
+                Clear Cart
+            </button>
+        </div>
 
-            const products = await response.json();
+    </div>
 
-            const productList =
-                document.getElementById('products');
+    <div class="footer">
+        <p>DevOps Portfolio Project | GitOps Powered by ArgoCD</p>
+    </div>
 
-            productList.innerHTML = '';
+</div>
 
-            products.forEach(product => {
+<script>
 
-                const li = document.createElement('li');
+const API_URL = "/api";
 
-                li.innerHTML = `
-                    ${product.name} - ₹${product.price}
-                    <button onclick="addToCart('${product.name}')">
-                        Add to Cart
-                    </button>
-                `;
+async function loadProducts() {
 
-                productList.appendChild(li);
-            });
+    const response = await fetch(`${API_URL}/products`);
+    const products = await response.json();
+
+    const container = document.getElementById("products");
+
+    container.innerHTML = "";
+
+    products.forEach(product => {
+
+        const div = document.createElement("div");
+        div.className = "product";
+
+        div.innerHTML = `
+            <h3>${product.name}</h3>
+            <div class="price">₹${product.price || "N/A"}</div>
+
+            <button onclick="addToCart('${product.name}')">
+                Add To Cart
+            </button>
+        `;
+
+        container.appendChild(div);
+    });
+}
+
+async function loadCart() {
+
+    const response = await fetch(`${API_URL}/cart`);
+    const cart = await response.json();
+
+    const cartDiv = document.getElementById("cart");
+
+    cartDiv.innerHTML = "";
+
+    if(cart.length === 0){
+        cartDiv.innerHTML = "<p>Cart is empty.</p>";
+        return;
+    }
+
+    cart.forEach(item => {
+
+        const div = document.createElement("div");
+        div.className = "cart-item";
+        div.innerHTML = item;
+
+        cartDiv.appendChild(div);
+    });
+}
+
+async function addToCart(productName){
+
+    await fetch(
+        `${API_URL}/cart?product=${encodeURIComponent(productName)}`,
+        {
+            method:"POST"
         }
+    );
 
-        async function addToCart(productName) {
+    loadCart();
+}
 
-            await fetch(
-                `${API_URL}/cart?product=${productName}`,
-                {
-                    method: 'POST'
-                }
-            );
+async function clearCart(){
 
-            await loadCart();
+    await fetch(
+        `${API_URL}/cart`,
+        {
+            method:"DELETE"
         }
+    );
 
-        async function loadCart() {
+    loadCart();
+}
 
-            const response =
-                await fetch(`${API_URL}/cart`);
+loadProducts();
+loadCart();
 
-            const cart = await response.json();
-
-            const cartList =
-                document.getElementById('cart');
-
-            cartList.innerHTML = '';
-
-            cart.forEach(item => {
-
-                const li =
-                    document.createElement('li');
-
-                li.textContent = item;
-
-                cartList.appendChild(li);
-            });
-        }
-
-        loadProducts();
-        loadCart();
-
-    </script>
+</script>
 
 </body>
-
 </html>
