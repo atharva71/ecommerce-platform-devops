@@ -5,6 +5,13 @@ pipeline {
     
 
     stages {
+        
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+        
         stage('Check Changed Files') {
             steps {
                 script {
@@ -32,13 +39,9 @@ pipeline {
         }
     }
 }
-        stage('Checkout') {
-            steps {
-                checkout scm
-            }
-        }
+        
 
-        stage('Validate Kubernetes Manifests') {
+        stage('Validate Kubernetes YAML') {
             steps {
                 sh '''
                 kubectl apply --dry-run=client -f k8s/

@@ -5,8 +5,12 @@ pipeline {
     environment {
         AWS_REGION = 'ap-south-1'
         AWS_ACCOUNT = '051987441306'
-        IMAGE_NAME = 'backend-api'
-        ECR_REPO = "${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com/${IMAGE_NAME}"
+        
+        BACKEND_IMAGE = 'backend-api'
+        FRONTEND_IMAGE = 'frontend'
+
+        BACKEND_ECR = "${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com/${BACKEND_IMAGE}"
+        FRONTEND_ECR = "${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com/${FRONTEND_IMAGE}"
     }
 
     stages {
@@ -42,7 +46,17 @@ pipeline {
             steps {
                 dir('backend-api') {
                     sh """
-                    docker build -t ${IMAGE_NAME}:${BUILD_NUMBER} .
+                    docker build -t ${BACKEND_IMAGE}:${BUILD_NUMBER} .
+                    """
+                }
+            }
+        }
+
+        stage('Build Frontend Image') {
+            steps {
+                dir('frontend') {
+                    sh """
+                    docker build -t ${FRONTEND_IMAGE}:${BUILD_NUMBER} .
                     """
                 }
             }
@@ -59,30 +73,87 @@ pipeline {
             }
         }
 
-        stage('Tag Docker Image') {
+        stage('Tag Backend Image') {
             steps {
                 sh """
-                docker tag ${IMAGE_NAME}:${BUILD_NUMBER} ${ECR_REPO}:${BUILD_NUMBER}
+                docker tag ${BACKEND_IMAGE}:${BUILD_NUMBER} \
+                ${BACKEND_ECR}:${BUILD_NUMBER}
                 """
             }
         }
 
-        stage('Push Docker Image') {
+        stage('Tag Frontend Image') {
             steps {
                 sh """
-                docker push ${ECR_REPO}:${BUILD_NUMBER}
+                docker tag ${FRONTEND_IMAGE}:${BUILD_NUMBER} \
+                ${FRONTEND_ECR}:${BUILD_NUMBER}
                 """
             }
         }
 
+        stage('Push Backend Image') {
+            steps {
+                sh """
+                docker push ${BACKEND_ECR}:${BUILD_NUMBER}
+                """
+            }
+        }
+
+        stage('Push Frontend Image') {
+            steps {
+                sh """
+                docker push ${FRONTEND_ECR}:${BUILD_NUMBER}
+                """
+            }
+        }
+
+        stage('Update Kubernetes Manifests') {
+            steps {
+
+                sh """
+                sed -i 's|image: .*|image: ${BACKEND_ECR}:${BUILD_NUMBER}|' \
+                k8s/backend-deployment.yaml
+
+                sed -i 's|image: .*|image: ${FRONTEND_ECR}:${BUILD_NUMBER}|' \
+                k8s/frontend-deployment.yaml
+                """
+            }
+        }
+        
+        stage('Commit and Push GitOps Changes') {
+            steps {
+
+                withCredentials([
+                usernamePassword(
+                credentialsId: 'github-pat',
+                usernameVariable: 'GITHUB_USER',
+                passwordVariable: 'GITHUB_PAT'
+            )
+        ]) {
+
+                sh """
+                git config user.email "jenkins@local"
+                git config user.name "Jenkins"
+
+                git add k8s/backend-deployment.yaml
+                git add k8s/frontend-deployment.yaml
+
+                git commit -m "[skip-ci] Update backend/frontend images ${BUILD_NUMBER}" || true
+
+                git remote set-url origin https://${GITHUB_USER}:${GITHUB_PAT}@github.com/atharva71/ecommerce-platform-devops.git
+
+                git push origin main
+                """
+            }
+        }
     }
-
     post {
 
         success {
             echo "Pipeline completed successfully."
-            echo "Image pushed to: ${ECR_REPO}:${BUILD_NUMBER}"
-            echo "Update k8s/backend-deployment.yaml with image tag ${BUILD_NUMBER} and push to GitHub for ArgoCD deployment."
+            echo "Backend Image : ${BACKEND_ECR}:${BUILD_NUMBER}"
+            echo "Frontend Image: ${FRONTEND_ECR}:${BUILD_NUMBER}"
+            echo "Kubernetes manifests updated and pushed to GitHub."
         }
 
         failure {
