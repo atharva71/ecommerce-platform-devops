@@ -10,12 +10,33 @@ pipeline {
     }
 
     stages {
-
+        
         stage('Checkout') {
             steps {
                 checkout scm
             }
         }
+        
+        stage('Check Changed Files') {
+            steps {
+                script {
+
+                    def changed = sh(
+                    script: 'git diff-tree --no-commit-id --name-only -r HEAD',
+                    returnStdout: true
+                ).trim()
+
+            echo changed
+
+                    if (!changed.contains('backend-api/') &&
+                    !changed.contains('frontend/')) {
+
+                    currentBuild.result = 'SUCCESS'
+                    error('Skipping application pipeline - only infrastructure files changed.')
+            }
+        }
+    }
+}
 
         stage('Build Backend Image') {
             steps {

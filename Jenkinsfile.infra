@@ -2,8 +2,36 @@ pipeline {
 
     agent { label 'docker' }
 
-    stages {
+    
 
+    stages {
+        stage('Check Changed Files') {
+            steps {
+                script {
+
+                    def changedFiles = sh(
+                    script: "git diff --name-only HEAD~1 HEAD",
+                    returnStdout: true
+                ).trim()
+
+            echo "Changed files:"
+            echo changedFiles
+
+            def infraChanged = false
+
+            changedFiles.split("\n").each { file ->
+                if (file.startsWith("k8s/")) {
+                    infraChanged = true
+                }
+            }
+
+            if (!infraChanged) {
+                currentBuild.result = 'SUCCESS'
+                error("No infrastructure changes detected. Skipping Infrastructure Pipeline.")
+            }
+        }
+    }
+}
         stage('Checkout') {
             steps {
                 checkout scm
