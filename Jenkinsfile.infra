@@ -1,0 +1,32 @@
+pipeline {
+
+    agent { label 'docker' }
+
+    stages {
+
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Validate Kubernetes Manifests') {
+            steps {
+                sh '''
+                kubectl apply --dry-run=client -f k8s/
+                '''
+            }
+        }
+
+    }
+
+    post {
+        success {
+            echo 'Infrastructure validation successful.'
+        }
+
+        failure {
+            echo 'Infrastructure validation failed.'
+        }
+    }
+}
