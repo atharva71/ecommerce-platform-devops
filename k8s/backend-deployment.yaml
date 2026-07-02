@@ -24,7 +24,7 @@ spec:
 
       containers:
         - name: backend-api
-          image: 051987441306.dkr.ecr.ap-south-1.amazonaws.com/backend-api:latest
+          image: 051987441306.dkr.ecr.ap-south-1.amazonaws.com/backend-api:23
           imagePullPolicy: Always
 
           ports:
