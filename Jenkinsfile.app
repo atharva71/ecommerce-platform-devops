@@ -17,9 +17,7 @@ pipeline {
         
         stage('Checkout') {
             steps {
-                checkout scm 
-		git branch -a
-		git status
+                checkout scm
             }
         }
         
