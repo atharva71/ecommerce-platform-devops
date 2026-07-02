@@ -17,7 +17,9 @@ pipeline {
         
         stage('Checkout') {
             steps {
-                checkout scm
+                checkout scm 
+		git branch -a
+		git status
             }
         }
         
@@ -142,7 +144,7 @@ pipeline {
 
                 git remote set-url origin https://${GITHUB_USER}:${GITHUB_PAT}@github.com/atharva71/ecommerce-platform-devops.git
 
-                git push origin main
+                git push origin HEAD:main
                 """
             }
         }
