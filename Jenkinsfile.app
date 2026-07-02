@@ -125,7 +125,7 @@ pipeline {
 
                 withCredentials([
                 usernamePassword(
-                credentialsId: 'github-pat',
+                credentialsId: 'github_pat',
                 usernameVariable: 'GITHUB_USER',
                 passwordVariable: 'GITHUB_PAT'
             )
