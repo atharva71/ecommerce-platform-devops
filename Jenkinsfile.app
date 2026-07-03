@@ -15,11 +15,36 @@ pipeline {
 
     stages {
         
-        stage('Checkout') {
-            steps {
-                checkout scm
-            }
-        }
+        stage('Checkout')
+	{ 
+	   steps {
+		   checkout scm
+		}
+	} 
+        
+        stage('Check Commit Message') {
+           steps {
+               script {
+
+                 	def commitMsg = sh(
+                	script: "git log -1 --pretty=%B",
+                	returnStdout: true
+            	).trim()
+
+            		echo "Latest Commit: ${commitMsg}"
+
+            		if (commitMsg.contains("[skip-ci]")) {
+
+                	catchError(buildResult: 'NOT_BUILT', stageResult: 'NOT_BUILT') {
+                    	error("GitOps commit detected. Skipping Application Pipeline.")
+                       		}
+
+                		return
+            			}
+         		}
+    		}  
+	}	        
+        
         
         stage('Check Changed Files') {
         steps {
@@ -35,9 +60,11 @@ pipeline {
             if (!changed.contains('backend-api/') &&
                 !changed.contains('frontend/')) {
 
-                currentBuild.result = 'SUCCESS'
+                catchError(buildResult: 'NOT_BUILT', stageResult: 'NOT_BUILT') {
                 error('Skipping application pipeline - only infrastructure files changed.')
             }
+            return
+          }     
         }
     }
 }
