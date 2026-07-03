@@ -3,6 +3,7 @@ kind: Deployment
 
 metadata:
   name: backend-api
+  namespace: ecommerce
   labels:
     app: backend-api
 
