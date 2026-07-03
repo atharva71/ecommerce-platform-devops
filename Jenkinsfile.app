@@ -10,7 +10,6 @@ pipeline {
         FRONTEND_IMAGE = 'frontend'
 
         BACKEND_ECR = "${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com/${BACKEND_IMAGE}"
-        SKIP_PIPELINE = 'false'
         FRONTEND_ECR = "${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com/${FRONTEND_IMAGE}"
     }
 
@@ -23,55 +22,28 @@ pipeline {
 		}
 	} 
         
-        stage('Check Commit Message') {
-            steps {
-                script {
-                    def commitMsg = sh(
-                        script: "git log -1 --pretty=%B",
-                        returnStdout: true
-                    ).trim()
+    
+ stage('Check Changed Files') {
+    steps {
+        script {
 
-                    echo "Latest Commit: ${commitMsg}"
+            def changed = sh(
+                script: 'git diff-tree --no-commit-id --name-only -r HEAD',
+                returnStdout: true
+            ).trim()
 
-                    if (commitMsg.contains("[skip-ci]")) {
-                        echo "GitOps commit detected. Skipping Application Pipeline."
-                        env.SKIP_PIPELINE = "true"
-                        currentBuild.result = "NOT_BUILT"
-                    }
-                }
+            echo changed
+
+            if (!changed.contains('backend-api/') &&
+                !changed.contains('frontend/')) {
+
+                currentBuild.result = 'SUCCESS'
+                error('Skipping application pipeline - only infrastructure files changed.')
             }
         }
-    		}  
-	}	        
-        
-        
-        stage('Check Changed Files') {
-            when {
-                expression { env.SKIP_PIPELINE != "true" }
-            }
-            steps {
-                script {
-                    def changed = sh(
-                        script: 'git diff-tree --no-commit-id --name-only -r HEAD',
-                        returnStdout: true
-                    ).trim()
-
-                    echo changed
-
-                    if (!changed.contains('backend-api/') &&
-                        !changed.contains('frontend/')) {
-                        echo "Infrastructure-only commit. Skipping Application Pipeline."
-                        env.SKIP_PIPELINE = "true"
-                        currentBuild.result = "NOT_BUILT"
-                    }
-                }
-            }
-        }
+    }
 }
         stage('Login to Amazon ECR') {
-            when {
-                expression { env.SKIP_PIPELINE != \"true\" }
-            }
             steps {
                 sh """
                 aws ecr get-login-password --region ${AWS_REGION} | \
@@ -83,9 +55,6 @@ pipeline {
         }
         
         stage('Build Backend Image') {
-            when {
-                expression { env.SKIP_PIPELINE != \"true\" }
-            }
             steps {
                 dir('backend-api') {
                     sh """
@@ -96,9 +65,6 @@ pipeline {
         }
 
         stage('Build Frontend Image') {
-            when {
-                expression { env.SKIP_PIPELINE != \"true\" }
-            }
             steps {
                 dir('frontend') {
                     sh """
@@ -110,9 +76,6 @@ pipeline {
 
         
         stage('Tag Backend Image') {
-            when {
-                expression { env.SKIP_PIPELINE != \"true\" }
-            }
             steps {
                 sh """
                 docker tag ${BACKEND_IMAGE}:${BUILD_NUMBER} \
@@ -122,9 +85,6 @@ pipeline {
         }
 
         stage('Tag Frontend Image') {
-            when {
-                expression { env.SKIP_PIPELINE != \"true\" }
-            }
             steps {
                 sh """
                 docker tag ${FRONTEND_IMAGE}:${BUILD_NUMBER} \
@@ -134,9 +94,6 @@ pipeline {
         }
 
         stage('Push Backend Image') {
-            when {
-                expression { env.SKIP_PIPELINE != \"true\" }
-            }
             steps {
                 sh """
                 docker push ${BACKEND_ECR}:${BUILD_NUMBER}
@@ -145,9 +102,6 @@ pipeline {
         }
 
         stage('Push Frontend Image') {
-            when {
-                expression { env.SKIP_PIPELINE != \"true\" }
-            }
             steps {
                 sh """
                 docker push ${FRONTEND_ECR}:${BUILD_NUMBER}
@@ -156,9 +110,6 @@ pipeline {
         }
 
         stage('Update Kubernetes Manifests') {
-            when {
-                expression { env.SKIP_PIPELINE != \"true\" }
-            }
             steps {
 
                 sh """
@@ -172,9 +123,6 @@ pipeline {
         }
         
         stage('Commit and Push GitOps Changes') {
-            when {
-                expression { env.SKIP_PIPELINE != \"true\" }
-            }
             steps {
 
                 withCredentials([
